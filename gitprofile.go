@@ -1,147 +1,97 @@
 package gitprofile
 
 import (
-	"bytes"
-	"errors"
+	"log"
 	"os"
-	"path/filepath"
-    "dario.cat/mergo"
-	"github.com/go-git/go-git/v5"
-	"github.com/go-git/go-git/v5/config"
+	"os/exec"
+	"strconv"
+
+	"github.com/pelletier/go-toml/v2"
 )
 
-func MergeProfileIntoRepo(name string, profileDirectory string, repoPath string) (*config.Config, error) {
-	profile, err := readConfigProfile(name, profileDirectory)
+type GitConfig struct {
+	User   *GitUser
+	Commit *GitCommitOptions
+	GPG    *GitGPGOptions
+}
+
+type GitGPGOptions struct {
+	Format string
+}
+
+type GitCommitOptions struct {
+	GPGSign bool
+}
+type GitUser struct {
+	Name       string
+	Email      string
+	SigningKey string
+}
+
+func ReadConfig(path string) (GitConfig, error) {
+	file, err := os.ReadFile(path)
 	if err != nil {
-		return nil, err
+		return GitConfig{}, err
 	}
-	repoConfig, err := readLocalRepoConfig(repoPath)
+	gitConfig := GitConfig{}
+	err = toml.Unmarshal(file, &gitConfig)
 	if err != nil {
-		return nil, err
+		return GitConfig{}, err
 	}
-	var finalConfig *config.Config
-	mergeCore(profile, repoConfig)
-	mergeUser(profile, repoConfig)
-	mergeCommitter(profile, repoConfig)
-	mergeAuthor(profile, repoConfig)
-	mergeInit(profile, repoConfig)
-	mergeRemotes(profile, repoConfig)
-	mergeURLS(profile, repoConfig)
-	mergeRemotes(profile, repoConfig)
-	mergeBranches(profile, repoConfig)
-	mergeURLS(profile, repoConfig)
 
-	return finalConfig, nil
+	return gitConfig, err
 
 }
 
-func mergeCore(src *config.Config, dest *config.Config) {
-	dest.Core.IsBare = src.Core.IsBare
-	if src.Core.Worktree != "" {
-		dest.Core.Worktree = src.Core.Worktree
-	}
-	if src.Core.CommentChar != "" {
-		dest.Core.CommentChar = src.Core.CommentChar
-	}
-	if src.Core.RepositoryFormatVersion != "" {
-		dest.Core.RepositoryFormatVersion = src.Core.RepositoryFormatVersion
-	}
-	mergo.Merge(src.Raw, dest.Raw, mergo.WithOverride)
+func ApplyProfile(config GitConfig) {
+	setUser(config.User)
+	setCommitOptions(config.Commit)
+	setGPGFormat(config.GPG)
 }
 
-func mergeUser(src *config.Config, dest *config.Config) {
-	if src.User.Name != "" {
-		dest.User.Name = src.User.Name
+func setGPGFormat(options *GitGPGOptions) {
+	if options == nil {
+		return
 	}
-	if src.User.Email != "" {
-		dest.User.Email = src.User.Email
-	}
-	mergo.Merge(src.Raw, dest.Raw, mergo.WithOverride)
-}
-
-func mergeCommitter(src *config.Config, dest *config.Config) {
-	if src.Committer.Name != "" {
-		dest.Committer.Name = src.Committer.Name
-	}
-	if src.Committer.Email != "" {
-		dest.Committer.Email = src.Committer.Email
-	}
-	mergo.Merge(src.Raw, dest.Raw, mergo.WithOverride)
-}
-
-func mergeAuthor(src *config.Config, dest *config.Config) {
-	if src.Author.Name != "" {
-		dest.Author.Name = src.Author.Name
-	}
-	if src.Author.Email != "" {
-		dest.Author.Email = src.Author.Email
-	}
-	mergo.Merge(src.Raw, dest.Raw, mergo.WithOverride)
-}
-
-func mergeInit(src *config.Config, dest *config.Config) {
-	if src.Init.DefaultBranch != "" {
-		dest.Init.DefaultBranch = src.Init.DefaultBranch
-	}
-	mergo.Merge(src.Raw, dest.Raw, mergo.WithOverride)
-}
-
-func mergeRemotes(src *config.Config, dest *config.Config) {
-	if src.Remotes != nil {
-		dest.Remotes = src.Remotes
-	}
-	mergo.Merge(src.Raw, dest.Raw, mergo.WithOverride)
-}
-
-func mergeBranches(src *config.Config, dest *config.Config) {
-	if src.Branches != nil {
-		dest.Branches = src.Branches
-	}
-	mergo.Merge(src.Raw, dest.Raw, mergo.WithOverride)
-}
-
-func mergeURLS(src *config.Config, dest *config.Config) {
-	if src.URLs != nil {
-		dest.URLs = src.URLs
-	}
-	mergo.Merge(src.Raw, dest.Raw, mergo.WithOverride)
-}
-
-
-func readLocalRepoConfig(path string) (*config.Config, error) {
-	repo, err := git.PlainOpen(path)
-	if err != nil {
-		return nil, err
-	}
-
-	config, err := repo.ConfigScoped(config.LocalScope)
-	if err != nil {
-		return nil, err
-	}
-
-	return config, nil
-}
-
-func readConfigProfile(name string, profileDirectory string) (*config.Config, error) {
-	files, err := os.ReadDir(profileDirectory)
-	if err != nil {
-		return nil, err
-	}
-	var configFile []byte
-
-	for _, file := range files {
-		if file.Name() == name {
-			fullPath := filepath.Join(profileDirectory, name)
-			configFile, err = os.ReadFile(fullPath)
-			if err != nil {
-				return nil, err
-			}
-			break
+	cmd := exec.Command("git", "config", "--local", "gpg.format", options.Format)
+	if options.Format != "" {
+		if err := cmd.Run(); err != nil {
+			log.Fatal(err)
 		}
 	}
-	if len(configFile) == 0 {
-		return nil, errors.New("Config file not found")
+
+}
+func setCommitOptions(options *GitCommitOptions) {
+	if options == nil {
+		return
 	}
-	r := bytes.NewReader(configFile)
-	return config.ReadConfig(r)
+	cmd := exec.Command("git", "config", "--local", "commit.gpgsign", strconv.FormatBool(options.GPGSign))
+	if err := cmd.Run(); err != nil {
+		log.Fatal(err)
+	}
+
+}
+func setUser(user *GitUser) {
+	if user == nil {
+		return
+	}
+	cmd := exec.Command("git", "config", "--local", "user.name", user.Name)
+	if user.Name != "" {
+		if err := cmd.Run(); err != nil {
+			log.Fatal(err)
+		}
+	}
+	cmd = exec.Command("git", "config", "--local", "user.email", user.Email)
+	if user.Email != "" {
+		if err := cmd.Run(); err != nil {
+			log.Fatal(err)
+		}
+	}
+	cmd = exec.Command("git", "config", "--local", "user.signingKey", user.SigningKey)
+	if user.SigningKey != "" {
+		if err := cmd.Run(); err != nil {
+			log.Fatal(err)
+		}
+	}
+
 }
