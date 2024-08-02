@@ -147,18 +147,23 @@ func contains_str(str string, arr []string) bool {
 func find_profiles_directory() string {
 	curr_os := runtime.GOOS
 	dir, ok := os.LookupEnv("GIT_PROFILES_DIR")
+	config_dir, err := os.UserConfigDir()
+	if err != nil && !ok {
+		log.Fatalln("Please set GIT_PROFILES_DIR")
+	}
+
 
 	if curr_os == "windows" {
 		if ok && dir != "" && dir[len(dir)-1] != '\\' {
 			return dir + "\\"
 		} else {
-			return "%USERPROFILE%\\AppData\\Local\\git-profile\\"
+			return config_dir + "\\Local\\git-profile\\"
 		}
 	} else {
 		if ok && dir != "" && dir[len(dir)-1] != '/' {
 			return dir + "/"
 		} else {
-			return "~/.config/git-profile/"
+			return config_dir +"/git-profile/"
 		}
 	}
 }
