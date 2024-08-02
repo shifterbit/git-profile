@@ -66,7 +66,7 @@ func main() {
 			return
 		}
 
-		ApplyProfile(profile, worktree)
+		ApplyProfile(profile, *worktree)
 		fmt.Println("Profile successfully applied")
 		return
 
@@ -155,30 +155,25 @@ func find_profiles_directory() string {
 			return dir + "\\"
 		} else {
 			profiles_dir := homedir + "\\git-profile\\"
-			err = os.Mkdir(profiles_dir, 644)
-			if err != nil {
-				log.Fatalln(err)
-			}
+			_ = os.Mkdir(profiles_dir, 644)
+			return profiles_dir
 		}
 	case "darwin":
 		if ok && dir != "" && dir[len(dir)-1] != '/' {
 			return dir + "/"
 		} else {
 			profiles_dir := homedir + "/.config/git-profile/"
-			err = os.Mkdir(profiles_dir, 644)
-			if err != nil {
-				log.Fatalln(err)
-			}
+			_ = os.Mkdir(profiles_dir, 644)
+	
+			return profiles_dir
 		}
 	default:
 		if ok && dir != "" && dir[len(dir)-1] != '/' {
 			return dir + "/"
 		} else {
 			profiles_dir := config_dir + "/git-profile/"
-			err = os.Mkdir(profiles_dir, 644)
-			if err != nil {
-				log.Fatalln(err)
-			}
+			_ = os.Mkdir(profiles_dir, 644)
+			return profiles_dir
 
 		}
 
