@@ -72,7 +72,6 @@ func main() {
 		ApplyProfile(profile)
 		fmt.Println("Profile successfully applied")
 		return
-		
 
 	}
 
@@ -86,7 +85,6 @@ func getProfile(name string, profiles map[string]GitConfig) (GitConfig, error) {
 
 	return entry, nil
 }
-
 
 func list_profiles(profiles map[string]GitConfig) []string {
 	profile_list := []string{}
@@ -148,23 +146,45 @@ func find_profiles_directory() string {
 	curr_os := runtime.GOOS
 	dir, ok := os.LookupEnv("GIT_PROFILES_DIR")
 	config_dir, err := os.UserConfigDir()
+	homedir, _ := os.UserHomeDir()
+
 	if err != nil && !ok {
 		log.Fatalln("Please set GIT_PROFILES_DIR")
 	}
 
-
-	if curr_os == "windows" {
+	switch curr_os {
+	case "windows":
 		if ok && dir != "" && dir[len(dir)-1] != '\\' {
 			return dir + "\\"
 		} else {
-			return config_dir + "\\Local\\git-profile\\"
+			profiles_dir := homedir + "\\git-profile\\"
+			err = os.Mkdir(profiles_dir, 644)
+			if err != nil {
+				log.Fatalln(err)
+			}
 		}
-	} else {
+	case "darwin":
 		if ok && dir != "" && dir[len(dir)-1] != '/' {
 			return dir + "/"
 		} else {
-			return config_dir +"/git-profile/"
+			profiles_dir := homedir + "/.config/git-profile/"
+			err = os.Mkdir(profiles_dir, 644)
+			if err != nil {
+				log.Fatalln(err)
+			}
 		}
+	default:
+		if ok && dir != "" && dir[len(dir)-1] != '/' {
+			return dir + "/"
+		} else {
+			profiles_dir := config_dir + "/git-profile/"
+			err = os.Mkdir(profiles_dir, 644)
+			if err != nil {
+				log.Fatalln(err)
+			}
+
+		}
+
 	}
 }
 
