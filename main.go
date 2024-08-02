@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -33,36 +34,72 @@ type GitUser struct {
 }
 
 type CLIOptions struct {
-	Local    bool
-	Worktree bool
-	Profile  string
+	Local        bool
+	Worktree     bool
+	Profile      string
+	ListProfiles bool
 }
 
 func main() {
-	ok, _ := ReadConfig("profile.toml")
-	fmt.Printf("%#v\n", ok.User)
-	fmt.Printf("%#v\n", ok.GPG)
-	fmt.Printf("%#v\n", ok.Commit)
-	_ = parse_options()
+	local := flag.Bool("local", true, "apply configuration to local repo")
+	worktree := flag.Bool("worktree", false, "apply configuration to worktree")
+	setProfile := flag.String("set-profile", "", "the profile to set")
+	listprofiles := flag.Bool("profiles", false, "list profiles")
+
+	flag.Parse()
+	config := CLIOptions{
+		Local:        *local,
+		Worktree:     *worktree,
+		Profile:      *setProfile,
+		ListProfiles: *listprofiles,
+	}
 	profiles_dir := find_profiles_directory()
 	profiles := collect_profiles(profiles_dir)
-	profile_list := list_profiles(profiles)
-	fmt.Printf("%#v\n", profiles)
-	fmt.Println(profile_list)
-}
 
-func print_profiles(profile_list []string) {
-	for _, v := range profile_list {
-		fmt.Println(v)
+	if config.ListProfiles {
+		print_profiles(profiles)
+		return
+	}
+
+	if config.Profile != "" {
+		profile, err := getProfile(config.Profile, profiles)
+
+		if err != nil {
+			fmt.Println(err.Error())
+			return
+		}
+
+		ApplyProfile(profile)
+		fmt.Println("Profile successfully applied")
+		return
+		
+
 	}
 
 }
+
+func getProfile(name string, profiles map[string]GitConfig) (GitConfig, error) {
+	entry, ok := profiles[name]
+	if !ok {
+		return GitConfig{}, errors.New("Profile Not Found")
+	}
+
+	return entry, nil
+}
+
+
 func list_profiles(profiles map[string]GitConfig) []string {
 	profile_list := []string{}
 	for name := range profiles {
 		profile_list = append(profile_list, name)
 	}
 	return profile_list
+}
+
+func print_profiles(profiles map[string]GitConfig) {
+	for name := range profiles {
+		fmt.Println(name)
+	}
 }
 
 func collect_profiles(profiles_dir string) map[string]GitConfig {
@@ -85,7 +122,6 @@ func collect_profiles(profiles_dir string) map[string]GitConfig {
 				log.Fatal(err)
 			}
 			profiles[profile_name] = profile_config
-			fmt.Println(profile_config)
 		}
 
 	}
@@ -110,7 +146,6 @@ func contains_str(str string, arr []string) bool {
 }
 func find_profiles_directory() string {
 	curr_os := runtime.GOOS
-	fmt.Println(curr_os)
 	dir, ok := os.LookupEnv("GIT_PROFILES_DIR")
 
 	if curr_os == "windows" {
@@ -125,19 +160,6 @@ func find_profiles_directory() string {
 		} else {
 			return "~/.config/git-profile/"
 		}
-	}
-}
-
-func parse_options() CLIOptions {
-	local := flag.Bool("local", true, "apply configuration to local repo")
-	worktree := flag.Bool("worktree", true, "apply configuration to worktree")
-	profile := flag.String("set-profile", "", "the profile to set")
-
-	flag.Parse()
-	return CLIOptions{
-		Local:    *local,
-		Worktree: *worktree,
-		Profile:  *profile,
 	}
 }
 
@@ -172,6 +194,7 @@ func setGPGFormat(options *GitGPGOptions) {
 			log.Fatal(err)
 		}
 	}
+	fmt.Println("gpg options set")
 
 }
 func setCommitOptions(options *GitCommitOptions) {
@@ -182,6 +205,7 @@ func setCommitOptions(options *GitCommitOptions) {
 	if err := cmd.Run(); err != nil {
 		log.Fatal(err)
 	}
+	fmt.Println("commit options set")
 
 }
 func setUser(user *GitUser) {
@@ -206,5 +230,6 @@ func setUser(user *GitUser) {
 			log.Fatal(err)
 		}
 	}
+	fmt.Println("user options set")
 
 }
