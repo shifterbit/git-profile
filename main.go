@@ -34,21 +34,18 @@ type GitUser struct {
 }
 
 type CLIOptions struct {
-	Local        bool
 	Worktree     bool
 	Profile      string
 	ListProfiles bool
 }
 
 func main() {
-	local := flag.Bool("local", true, "apply configuration to local repo")
 	worktree := flag.Bool("worktree", false, "apply configuration to worktree")
 	setProfile := flag.String("set-profile", "", "the profile to set")
-	listprofiles := flag.Bool("profiles", false, "list profiles")
+	listprofiles := flag.Bool("list", false, "list profiles")
 
 	flag.Parse()
 	config := CLIOptions{
-		Local:        *local,
 		Worktree:     *worktree,
 		Profile:      *setProfile,
 		ListProfiles: *listprofiles,
