@@ -66,7 +66,7 @@ func main() {
 			return
 		}
 
-		ApplyProfile(profile)
+		ApplyProfile(profile, worktree)
 		fmt.Println("Profile successfully applied")
 		return
 
@@ -200,17 +200,22 @@ func ReadConfig(path string) (GitConfig, error) {
 
 }
 
-func ApplyProfile(config GitConfig) {
-	setUser(config.User)
-	setCommitOptions(config.Commit)
-	setGPGFormat(config.GPG)
+func ApplyProfile(config GitConfig, worktree bool) {
+	setUser(config.User, worktree)
+	setCommitOptions(config.Commit, worktree)
+	setGPGFormat(config.GPG, worktree)
 }
 
-func setGPGFormat(options *GitGPGOptions) {
+func setGPGFormat(options *GitGPGOptions, worktree bool) {
 	if options == nil {
 		return
 	}
-	cmd := exec.Command("git", "config", "--local", "gpg.format", options.Format)
+	baseArgs := []string{"config"}
+	if worktree {
+		baseArgs = append(baseArgs, "--worktree")
+	}
+
+	cmd := exec.Command("git", append(baseArgs, "gpg.format", options.Format)...)
 	if options.Format != "" {
 		if err := cmd.Run(); err != nil {
 			log.Fatal(err)
@@ -219,34 +224,43 @@ func setGPGFormat(options *GitGPGOptions) {
 	fmt.Println("gpg options set")
 
 }
-func setCommitOptions(options *GitCommitOptions) {
+func setCommitOptions(options *GitCommitOptions, worktree bool) {
 	if options == nil {
 		return
 	}
-	cmd := exec.Command("git", "config", "--local", "commit.gpgsign", strconv.FormatBool(options.GPGSign))
+	baseArgs := []string{"config"}
+	if worktree {
+		baseArgs = append(baseArgs, "--worktree")
+	}
+	cmd := exec.Command("git", append(baseArgs, "commit.gpgsign", strconv.FormatBool(options.GPGSign))...)
 	if err := cmd.Run(); err != nil {
 		log.Fatal(err)
 	}
 	fmt.Println("commit options set")
 
 }
-func setUser(user *GitUser) {
+func setUser(user *GitUser, worktree bool) {
 	if user == nil {
 		return
 	}
-	cmd := exec.Command("git", "config", "--local", "user.name", user.Name)
+	baseArgs := []string{"config"}
+	if worktree {
+		baseArgs = append(baseArgs, "--worktree")
+	}
+
+	cmd := exec.Command("git", append(baseArgs, "user.name", user.Name)...)
 	if user.Name != "" {
 		if err := cmd.Run(); err != nil {
 			log.Fatal(err)
 		}
 	}
-	cmd = exec.Command("git", "config", "--local", "user.email", user.Email)
+	cmd = exec.Command("git", "config", "user.email", user.Email)
 	if user.Email != "" {
 		if err := cmd.Run(); err != nil {
 			log.Fatal(err)
 		}
 	}
-	cmd = exec.Command("git", "config", "--local", "user.signingKey", user.SigningKey)
+	cmd = exec.Command("git", "config", "--local", "user.signingkey", user.SigningKey)
 	if user.SigningKey != "" {
 		if err := cmd.Run(); err != nil {
 			log.Fatal(err)
