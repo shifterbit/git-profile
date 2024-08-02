@@ -1,11 +1,12 @@
 package main
 
 import (
+	"flag"
+	"fmt"
 	"log"
 	"os"
 	"os/exec"
 	"strconv"
-	"fmt"
 
 	"github.com/pelletier/go-toml/v2"
 )
@@ -29,11 +30,31 @@ type GitUser struct {
 	SigningKey string
 }
 
+type CLIOptions struct {
+	Local bool
+	Worktree bool
+	Profile string
+}
 func main() {
 	ok, _ :=  ReadConfig("profile.toml")
 	fmt.Printf("%#v\n", ok.User)
 	fmt.Printf("%#v\n", ok.GPG)
 	fmt.Printf("%#v\n", ok.Commit)
+	_ = parse_options()
+}
+
+
+func parse_options() CLIOptions{
+	local := flag.Bool("local", true, "apply configuration to local repo")
+	worktree := flag.Bool("worktree", true, "apply configuration to worktree")
+	profile := flag.String("set-profile", "", "the profile to set")
+	
+	flag.Parse()
+	return CLIOptions{
+		Local:    *local,
+		Worktree: *worktree,
+		Profile:  *profile,
+	}
 }
 
 
