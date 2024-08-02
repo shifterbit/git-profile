@@ -43,6 +43,10 @@ func main() {
 	worktree := flag.Bool("worktree", false, "apply configuration to worktree")
 	setProfile := flag.String("set-profile", "", "the profile to set")
 	listprofiles := flag.Bool("list", false, "list profiles")
+	if len(os.Args) == 1 {
+		flag.PrintDefaults()
+		return
+	}
 
 	flag.Parse()
 	config := CLIOptions{
