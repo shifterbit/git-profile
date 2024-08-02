@@ -1,10 +1,11 @@
-package gitprofile
+package main
 
 import (
 	"log"
 	"os"
 	"os/exec"
 	"strconv"
+	"fmt"
 
 	"github.com/pelletier/go-toml/v2"
 )
@@ -27,6 +28,14 @@ type GitUser struct {
 	Email      string
 	SigningKey string
 }
+
+func main() {
+	ok, _ :=  ReadConfig("profile.toml")
+	fmt.Printf("%#v\n", ok.User)
+	fmt.Printf("%#v\n", ok.GPG)
+	fmt.Printf("%#v\n", ok.Commit)
+}
+
 
 func ReadConfig(path string) (GitConfig, error) {
 	file, err := os.ReadFile(path)
