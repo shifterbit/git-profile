@@ -11,5 +11,6 @@
     pkgs = nixpkgs.legacyPackages.x86_64-linux;
   in {
     devShells.x86_64-linux.default = pkgs.callPackage ./shell.nix {};
+    packages.x86_64-linux.default = pkgs.callPackage ./default.nix {};
   };
 }
